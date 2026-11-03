@@ -71,11 +71,14 @@ import com.wqmtmbdi.mbcc.AvatarCropActivity
 import com.wqmtmbdi.mbcc.AvatarStore
 import com.wqmtmbdi.mbcc.MbdiSurfaceKind
 import com.wqmtmbdi.mbcc.colorFromHex
+import com.wqmtmbdi.mbcc.danger
 import com.wqmtmbdi.mbcc.mbdiCard
 import com.wqmtmbdi.mbcc.mbdiSolid
 import com.wqmtmbdi.mbcc.mbdiSurface
 import androidx.compose.material3.Icon
 import com.wqmtmbdi.mbcc.data.CHARACTERS
+import com.wqmtmbdi.mbcc.ui.components.BtnStyle
+import com.wqmtmbdi.mbcc.ui.components.MbdiButton
 import com.wqmtmbdi.mbcc.ui.icons.Lucide
 import com.wqmtmbdi.mbcc.ui.theme.MbdiShape
 import com.wqmtmbdi.mbcc.ui.theme.MbdiSpace
@@ -98,6 +101,7 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
     var page by remember { mutableStateOf<String?>(null) }
     var editField by remember { mutableStateOf<String?>(null) }   // "name" | "sig"
     var tick by remember { mutableIntStateOf(0) }
+    var confirmReset by remember { mutableStateOf(false) }   // 重置全部数据（二次确认）
 
     val profileCrop = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         tick++   // 裁剪返回刷新
@@ -133,17 +137,6 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
             // 禁闭者形象（v1.5.2：弹窗改独立整页）
             PageChrome(onBack = { page = null })
             AvatarPage(onBack = { page = null })
-            return
-        }
-        "settings" -> {
-            // 从设置页返回时 tick++：重置数据等操作可能改了个人页上的统计
-            PageChrome(onBack = { page = null; tick++ })
-            SettingsPage(
-                onBack = { page = null; tick++ },
-                onOpenTheme = { page = "theme" },
-                onOpenAbout = { page = "about" },
-                onOpenOpenSource = { page = "opensource" }
-            )
             return
         }
         "theme" -> {
@@ -267,11 +260,15 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
         // ---- 常用入口（v1.5.1：4 列 × 2 行图标网格，一行四个）----
         //  ★ 低频内容（关于 / 开源组件 / 重置数据）已收进「全部设置」，个人页只留每天会点的动作；
         //    这里刻意不再加第 7 个，一屏装不下就不好找了。
+        // ★ v1.5.2：删除「全部设置」页，所有入口平铺在「我的」页（4 列 × 2 行）
         val quick = listOf(
             QuickEntry(Lucide.ClipboardList, "鉴定记录", t.gold) { showRecords = true },
             QuickEntry(Lucide.TriangleAlert, "崩溃日志", t.text3) { showCrashLog = true },
             QuickEntry(Lucide.Image, "禁闭者形象", t.purple) { page = "avatars" },
-            QuickEntry(Lucide.Settings, "全部设置", t.gold) { page = "settings" }
+            QuickEntry(Lucide.Palette, "主题", t.gold) { page = "theme" },
+            QuickEntry(Lucide.Info, "关于", t.text2) { page = "about" },
+            QuickEntry(Lucide.Package, "开源组件", t.purpleDim) { page = "opensource" },
+            QuickEntry(Lucide.TriangleAlert, "重置数据", t.danger) { confirmReset = true }
         )
         Column(
             Modifier
@@ -301,6 +298,45 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
     RecordsOverlay(showRecords) { showRecords = false }
     // ★ 第 7 批：崩溃日志（自动留档 + 折叠查看 + 导出 txt）
     CrashLogOverlay(showCrashLog) { showCrashLog = false }
+
+    // 重置全部数据（危险操作，二次确认）
+    if (confirmReset) {
+        Dialog(onDismissRequest = { confirmReset = false }) {
+            com.wqmtmbdi.mbcc.ui.components.DialogScale {
+                Column(
+                    Modifier.fillMaxWidth(0.84f)
+                        .mbdiSolid(shape = RoundedCornerShape(MbdiShape.panel))
+                        .padding(MbdiSpace.l),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        "重置全部数据？",
+                        fontSize = MbdiType.Heading, fontWeight = FontWeight.Bold, color = colorFromHex(t.text)
+                    )
+                    Text(
+                        "将清空：鉴定记录、已解锁的禁闭者与狂厄特化、成就、自定义头像与个人资料。此操作不可撤销。",
+                        fontSize = MbdiType.Label, lineHeight = 20.sp, color = colorFromHex(t.text3),
+                        modifier = Modifier.padding(top = MbdiSpace.s, bottom = MbdiSpace.l)
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MbdiSpace.s)) {
+                        MbdiButton(
+                            "取消", { confirmReset = false },
+                            modifier = Modifier.weight(1f), style = BtnStyle.Secondary
+                        )
+                        MbdiButton(
+                            "确认重置",
+                            {
+                                AppStorage.resetAllData()
+                                confirmReset = false
+                                tick++
+                            },
+                            modifier = Modifier.weight(1f), style = BtnStyle.Danger
+                        )
+                    }
+                }
+            }
+        }
+    }
 
     if (editField != null) {
         EditProfileDialog(

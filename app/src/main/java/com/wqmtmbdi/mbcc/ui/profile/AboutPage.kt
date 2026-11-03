@@ -95,6 +95,11 @@ fun AboutPage(onBack: () -> Unit, onOpenChangelog: () -> Unit) {
                     modifier = Modifier.padding(top = 4.dp)
                 )
                 Text(
+                    "开发者：海与燕制作组",
+                    fontSize = MbdiType.Label, color = colorFromHex(t.text2),
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+                Text(
                     "粉丝二创作品，与《无期迷途》官方无关；此游戏搭配 AI 辅助制作。",
                     fontSize = MbdiType.Caption, lineHeight = 17.sp, color = colorFromHex(t.text3),
                     textAlign = TextAlign.Center,
