@@ -1,0 +1,13 @@
+<resources>
+    <!-- MBDI 人格鉴定所主题（★ 第 8 批配色重做）：深墨金「零镜仪器」。
+         启动瞬间的 windowBackground 为「零镜启动」静态图（深底 + 金 scan-line）。 -->
+    <style name="Theme.MBDI" parent="android:Theme.Material.NoActionBar">
+        <item name="android:colorPrimary">#D9A93F</item>
+        <item name="android:colorAccent">#8E86C8</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowBackground">@drawable/splash_zero_mirror</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+</resources>

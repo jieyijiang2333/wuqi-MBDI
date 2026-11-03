@@ -1,0 +1,27 @@
+<!-- 零镜启动时刻（用户要求：用 App 打包图标，不再用自绘 scan-line 图标）：
+     深墨底 + 居中 App 图标 + 一条淡金扫描线。静态 windowBackground（零成本） -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <color android:color="#0D1015" />
+    </item>
+    <!-- 扫描线（静止帧）：两端淡出的金色细线，位于图标下方 -->
+    <item
+        android:gravity="center_horizontal|center"
+        android:width="150dp"
+        android:height="1dp"
+        android:top="76dp">
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="0"
+                android:startColor="#00D9A93F"
+                android:centerColor="#99D9A93F"
+                android:endColor="#00D9A93F" />
+        </shape>
+    </item>
+    <!-- App 图标（与系统启动画面显示的图标一致） -->
+    <item
+        android:gravity="center"
+        android:width="96dp"
+        android:height="96dp"
+        android:drawable="@mipmap/ic_launcher" />
+</layer-list>

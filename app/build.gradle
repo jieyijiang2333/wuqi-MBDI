@@ -1,0 +1,79 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+    id 'org.jetbrains.kotlin.plugin.compose'
+}
+
+android {
+    namespace 'com.wqmtmbdi.mbcc'
+    compileSdk 36
+
+    buildFeatures {
+        buildConfig true
+        compose true
+    }
+
+    defaultConfig {
+        applicationId "com.wqmtmbdi.mbcc"
+        minSdk 29
+        targetSdk 36
+        versionCode 5
+        versionName "1.5.0"
+    }
+
+    // ★ 签名配置从根目录的 keystore.properties 读取（该文件不提交，见 keystore.properties.example）。
+    //   没有这个文件时，assembleRelease 会产出未签名 APK，别人可以直接构建。
+    def keystoreFile = rootProject.file("keystore.properties")
+    def keystoreProps = new Properties()
+    if (keystoreFile.exists()) {
+        keystoreFile.withInputStream { keystoreProps.load(it) }
+    }
+    def hasKeystore = keystoreProps.getProperty("RELEASE_STORE_FILE") != null
+
+    signingConfigs {
+        release {
+            if (hasKeystore) {
+                storeFile file(keystoreProps.getProperty("RELEASE_STORE_FILE"))
+                storePassword keystoreProps.getProperty("RELEASE_STORE_PASSWORD")
+                keyAlias keystoreProps.getProperty("RELEASE_KEY_ALIAS")
+                keyPassword keystoreProps.getProperty("RELEASE_KEY_PASSWORD")
+                storeType 'PKCS12'
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (hasKeystore) signingConfig signingConfigs.release
+            // ★ 关掉 PNG 压缩优化：图标是彩色渐变 + 文字的图，被 crunchPngs 压过会掉色/糊
+            //   （与记账本一致；生成图标的工具是 .workbuddy\tmp\MakeIcons.java）
+            crunchPngs false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'com.google.code.gson:gson:2.10.1'
+
+    // Compose
+    def composeBom = platform('androidx.compose:compose-bom:2024.09.03')
+    implementation composeBom
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.ui:ui-graphics'
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.activity:activity-compose:1.9.2'
+
+    testImplementation 'junit:junit:4.13.2'
+}
