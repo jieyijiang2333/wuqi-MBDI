@@ -93,7 +93,7 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
     var showCrashLog by remember { mutableStateOf(false) }
     /**
      * 整页入口（null = 正常「我的」页）：
-     * "star" 星辰计划 ｜ "starters" 免责声明 ｜ "avatars" 禁闭者形象 ｜ "settings" 全部设置 ｜ "theme" 主题 ｜ "about" 关于 ｜ "opensource" 开源组件
+     * "avatars" 禁闭者形象 ｜ "settings" 全部设置 ｜ "theme" 主题 ｜ "about" 关于 ｜ "opensource" 开源组件
      */
     var page by remember { mutableStateOf<String?>(null) }
     var editField by remember { mutableStateOf<String?>(null) }   // "name" | "sig"
@@ -126,24 +126,13 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
     val pSig = cp?.sig?.takeIf { it.isNotBlank() }
     val unlockedCount = AppStorage.data.unlockedChars.size
 
-    // ★ 整页入口：星辰计划 / 免责声明 / 禁闭者形象 / 全部设置 / 主题 / 关于 / 更新日志 / 开源组件
+    // ★ 整页入口：禁闭者形象 / 全部设置 / 主题 / 关于 / 更新日志 / 开源组件
     // ★ 都登记为「独立页」——底部导航自动隐藏，返回键先返回上一级
     when (page) {
-        "star" -> {
-            PageChrome(onBack = { page = null })
-            StarPlanPage(onOpenTerms = { page = "starters" }, onBack = { page = null })
-            return
-        }
         "avatars" -> {
             // 禁闭者形象（v1.5.2：弹窗改独立整页）
             PageChrome(onBack = { page = null })
             AvatarPage(onBack = { page = null })
-            return
-        }
-        "starters" -> {
-            // 星辰计划 → 免责声明全文（独立页），返回回到星辰计划
-            PageChrome(onBack = { page = "star" })
-            StarPlanTermsPage(onBack = { page = "star" })
             return
         }
         "settings" -> {
@@ -282,7 +271,6 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
             QuickEntry(Lucide.ClipboardList, "鉴定记录", t.gold) { showRecords = true },
             QuickEntry(Lucide.TriangleAlert, "崩溃日志", t.text3) { showCrashLog = true },
             QuickEntry(Lucide.Image, "禁闭者形象", t.purple) { page = "avatars" },
-            QuickEntry(Lucide.Sparkle, "星辰计划", t.purpleDim) { page = "star" },
             QuickEntry(Lucide.Settings, "全部设置", t.gold) { page = "settings" }
         )
         Column(
