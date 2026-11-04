@@ -26,13 +26,22 @@
 | minSdk | 29 |
 
 ```bash
-# 1. 签名（可选；不配置则产出未签名 APK）
-cp keystore.properties.example keystore.properties
-# 编辑 keystore.properties，填入你自己的 keystore
+# 1. 只想装到自己手机上：直接用 debug 签名构建，无需配置
+./gradlew assembleDebug
 
-# 2. 构建
+# 2. 要 release 包：先准备自己的 keystore（已有可跳过）
+keytool -genkeypair -v -keystore release.jks -keyalg RSA -keysize 2048 \
+  -validity 10000 -alias wuqi -storetype JKS \
+  -storepass 你的密码 -keypass 你的密码 \
+  -dname "CN=YourName, O=Dev, C=CN"
+
+cp keystore.properties.example keystore.properties
+# 编辑 keystore.properties，填入自己的 keystore 路径与密码
+
 ./gradlew assembleRelease
 ```
+
+注意：签名不同等于两个不同的应用，别人签的包无法覆盖安装官方发布的 APK（需先卸载）。
 
 产物：`app/build/outputs/apk/release/app-release.apk`
 
