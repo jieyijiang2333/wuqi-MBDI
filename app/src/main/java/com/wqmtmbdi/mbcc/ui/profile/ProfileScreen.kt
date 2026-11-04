@@ -133,6 +133,12 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
     // ★ 整页入口：禁闭者形象 / 全部设置 / 主题 / 关于 / 更新日志 / 开源组件
     // ★ 都登记为「独立页」——底部导航自动隐藏，返回键先返回上一级
     when (page) {
+        "privacy" -> {
+            // 隐私政策（只读整页，v1.5.2 新增）
+            PageChrome(onBack = { page = null })
+            PrivacyPage(onBack = { page = null })
+            return
+        }
         "avatars" -> {
             // 禁闭者形象（v1.5.2：弹窗改独立整页）
             PageChrome(onBack = { page = null })
@@ -268,7 +274,8 @@ fun ProfileScreen(modifier: Modifier = Modifier) {
             QuickEntry(Lucide.Palette, "主题", t.gold) { page = "theme" },
             QuickEntry(Lucide.Info, "关于", t.text2) { page = "about" },
             QuickEntry(Lucide.Package, "开源组件", t.purpleDim) { page = "opensource" },
-            QuickEntry(Lucide.TriangleAlert, "重置数据", t.danger) { confirmReset = true }
+            QuickEntry(Lucide.TriangleAlert, "重置数据", t.danger) { confirmReset = true },
+            QuickEntry(Lucide.ShieldCheck, "隐私条款", t.text2) { page = "privacy" }
         )
         Column(
             Modifier

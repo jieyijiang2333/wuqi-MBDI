@@ -71,7 +71,7 @@ object AppStorage {
     private const val KEY_SEEN_UNLOCKS = "gallery_seen_unlocks"
 
     /** 隐私条款版本号；隐私内容更新时 +1，已读用户会再次收到弹窗（v3 = 2026-10-01 换成完整版十七节协议） */
-    const val PRIVACY_VERSION = 3
+    const val PRIVACY_VERSION = 4
 
     /** 公告版本号；公告内容更新时 +1（v2 = 2026-10-14 新增 v1.5.0 公告） */
     const val ANNOUNCE_VERSION = 2
