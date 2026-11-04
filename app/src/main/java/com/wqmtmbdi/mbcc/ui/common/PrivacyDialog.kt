@@ -1,7 +1,8 @@
 package com.wqmtmbdi.mbcc.ui.common
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,34 +11,32 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.wqmtmbdi.mbcc.AppStorage
 import com.wqmtmbdi.mbcc.colorFromHex
 import com.wqmtmbdi.mbcc.ui.components.BtnStyle
@@ -48,13 +47,13 @@ import com.wqmtmbdi.mbcc.ui.theme.MbdiSpace
 import com.wqmtmbdi.mbcc.ui.theme.MbdiType
 
 /**
- * 首启隐私条款全屏弹窗（版本化，对齐 [AppStorage.PRIVACY_VERSION]；不同意则退出）。
+ * 首启隐私条款（版本化，对齐 [AppStorage.PRIVACY_VERSION]；不同意则退出）。
  *
- * ★ 2026-10-01（对齐记账本 / 局长终端口径，用户要求）：
- *  - 正文改为**完整版用户协议与隐私声明**（assets/privacy_policy.txt，十七节），不再是一页短条款；
- *  - **强制阅读**：滚动进度环形指示器，阅读到底部（100%）后「同意并继续」才亮起；
- *  - 「不同意并退出」与「同意并继续」并排；不同意走二次确认后关闭应用；
- *  - 滚动条隐藏、点遮罩与返回键都关不掉（Dialog onDismissRequest 为空）。
+ * ★ v1.5.2 用户要求改版：
+ *  - **真正全屏**（`usePlatformDefaultWidth = false` + 状态栏/导航栏避让）；
+ *  - **删掉阅读进度圆环**，不再强制滑到底；
+ *  - 底部改成「小方框勾选 → 右侧确认」：勾选后点确认立即进入；
+ *  - 保留「不同意并退出」（二次确认），合规上仍需给出拒绝路径。
  */
 @Composable
 fun PrivacyDialog(visible: Boolean, onAgree: () -> Unit) {
@@ -62,6 +61,7 @@ fun PrivacyDialog(visible: Boolean, onAgree: () -> Unit) {
     val t = AppStorage.currentMBDITheme()
     val context = LocalContext.current
     var confirmReject by remember { mutableStateOf(false) }
+    var agreed by remember { mutableStateOf(false) }
 
     // 读取隐私全文（读不到时退回内置简版，保证弹窗永远可用）
     val policy = remember {
@@ -70,29 +70,21 @@ fun PrivacyDialog(visible: Boolean, onAgree: () -> Unit) {
         }.getOrElse { FALLBACK_POLICY }
     }
 
-    val scroll = rememberScrollState()
-    var reachedEnd by remember { mutableStateOf(false) }
-    val progress by remember {
-        derivedStateOf {
-            val max = scroll.maxValue
-            if (max <= 0) 1f else (scroll.value.toFloat() / max).coerceIn(0f, 1f)
-        }
-    }
-    // 读到过底部就一直算已读（往上滑回去也不撤销）
-    LaunchedEffect(progress) {
-        if (progress >= 0.999f) reachedEnd = true
-    }
-
-    Dialog(onDismissRequest = {}) {
-        com.wqmtmbdi.mbcc.ui.components.DialogScale {
+    Dialog(
+        onDismissRequest = {},
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Box(
             Modifier
                 .fillMaxSize()
                 .background(colorFromHex(t.bg))
+                .statusBarsPadding()
+                .navigationBarsPadding()
         ) {
             Column(Modifier.fillMaxSize()) {
+                // ---- 标题 ----
                 Row(
-                    Modifier.fillMaxWidth().padding(top = 22.dp, bottom = 4.dp),
+                    Modifier.fillMaxWidth().padding(top = 18.dp, bottom = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
@@ -106,126 +98,137 @@ fun PrivacyDialog(visible: Boolean, onAgree: () -> Unit) {
                         modifier = Modifier.padding(start = 8.dp)
                     )
                 }
-                // 正文：可滚动、无滚动条（Compose 默认不画）+ ★ 底部渐变遮罩（方案 5.8）
-                Box(Modifier.fillMaxWidth().weight(1f)) {
-                    Column(
-                        Modifier
-                            .fillMaxSize()
-                            .verticalScroll(scroll)
-                            .padding(horizontal = 22.dp)
-                    ) {
-                        Text(
-                            policy,
-                            fontSize = 13.sp, lineHeight = 23.sp, color = colorFromHex(t.text2),
-                            modifier = Modifier.padding(top = 10.dp)
-                        )
-                        Spacer(Modifier.height(20.dp))
-                    }
-                    Box(
-                        Modifier
-                            .align(Alignment.BottomCenter)
-                            .fillMaxWidth()
-                            .height(40.dp)
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(Color.Transparent, colorFromHex(t.bg))
-                                )
+
+                // ---- 正文：逐行渲染，标题自动加粗 ----
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp)
+                ) {
+                    policy.split("\n").forEach { line ->
+                        when {
+                            line.isBlank() -> Spacer(Modifier.height(7.dp))
+                            Regex("^[一二三四五六七八九十]+、").containsMatchIn(line) -> Text(
+                                line,
+                                fontSize = MbdiType.Heading, fontWeight = FontWeight.Bold,
+                                color = colorFromHex(t.gold), lineHeight = 24.sp,
+                                modifier = Modifier.padding(top = 8.dp)
                             )
-                    )
+                            line.startsWith("▍") -> Text(
+                                line,
+                                fontSize = MbdiType.Body, fontWeight = FontWeight.Bold,
+                                color = colorFromHex(t.text), lineHeight = 23.sp,
+                                modifier = Modifier.padding(top = 4.dp)
+                            )
+                            else -> Text(
+                                line,
+                                fontSize = MbdiType.Body, lineHeight = 23.sp,
+                                color = colorFromHex(t.text2)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(20.dp))
                 }
-                // 底部：阅读进度环 + 两个按钮
-                Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp).padding(bottom = 20.dp)) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        PrivacyProgressRing(progress = if (reachedEnd) 1f else progress)
+
+                // ---- 底部：勾选框 + 右侧确认 ----
+                Column(
+                    Modifier.fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 10.dp, bottom = 12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CheckSquare(checked = agreed) { agreed = !agreed }
+                        Spacer(Modifier.width(8.dp))
                         Text(
-                            if (reachedEnd) "已读完，可以同意了"
-                            else "请滑动阅读到底部，「同意并继续」才会亮起",
-                            fontSize = MbdiType.Caption,
-                            color = colorFromHex(if (reachedEnd) t.gold else t.text3),
-                            modifier = Modifier.padding(start = MbdiSpace.s)
+                            "我已阅读并同意《用户协议与隐私声明》",
+                            fontSize = MbdiType.Label, color = colorFromHex(t.text2),
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        MbdiButton(
+                            "确认", onAgree,
+                            modifier = Modifier.width(96.dp),
+                            style = BtnStyle.Primary,
+                            enabled = agreed
                         )
                     }
-                    Spacer(Modifier.height(MbdiSpace.s))
-                    Row(horizontalArrangement = Arrangement.spacedBy(MbdiSpace.s)) {
-                        // ★ 以前点「不同意」直接 killProcess，误触就退出；现在先问一句
-                        MbdiButton(
-                            "不同意并退出", { confirmReject = true },
-                            modifier = Modifier.weight(1f), style = BtnStyle.Secondary
-                        )
-                        MbdiButton(
-                            "同意并继续", onAgree,
-                            modifier = Modifier.weight(1f), style = BtnStyle.Primary,
-                            enabled = reachedEnd
-                        )
-                    }
+                    Text(
+                        "不同意并退出",
+                        fontSize = MbdiType.Caption, color = colorFromHex(t.text3),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { confirmReject = true }
+                            .padding(vertical = 8.dp)
+                    )
                 }
             }
         }
-        }   // ← DialogScale 结束
     }
 
     // 「不同意」二次确认（原来一点就直接杀进程，误触没有回头路）
     if (confirmReject) {
         Dialog(onDismissRequest = { confirmReject = false }) {
             com.wqmtmbdi.mbcc.ui.components.DialogScale {
-            Column(
-                Modifier
-                    .fillMaxWidth(0.84f)
-                    .background(colorFromHex(t.card), RoundedCornerShape(MbdiShape.panel))
-                    .padding(MbdiSpace.l),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    "不同意并退出？",
-                    fontSize = MbdiType.Heading, fontWeight = FontWeight.Bold, color = colorFromHex(t.text)
-                )
-                Text(
-                    "不同意隐私条款将无法继续使用本应用，应用会立即关闭。",
-                    fontSize = MbdiType.Label, lineHeight = 20.sp, color = colorFromHex(t.text3),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = MbdiSpace.s, bottom = MbdiSpace.l)
-                )
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MbdiSpace.s)) {
-                    MbdiButton(
-                        "返回", { confirmReject = false },
-                        modifier = Modifier.weight(1f), style = BtnStyle.Secondary
+                Column(
+                    Modifier
+                        .fillMaxWidth(0.84f)
+                        .background(colorFromHex(t.card), RoundedCornerShape(MbdiShape.panel))
+                        .padding(MbdiSpace.l),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        "不同意并退出？",
+                        fontSize = MbdiType.Heading, fontWeight = FontWeight.Bold, color = colorFromHex(t.text)
                     )
-                    MbdiButton(
-                        "确认退出",
-                        { android.os.Process.killProcess(android.os.Process.myPid()) },
-                        modifier = Modifier.weight(1f), style = BtnStyle.Danger
+                    Text(
+                        "不同意隐私条款将无法继续使用本应用，应用会立即关闭。",
+                        fontSize = MbdiType.Label, lineHeight = 20.sp, color = colorFromHex(t.text3),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = MbdiSpace.s, bottom = MbdiSpace.l)
                     )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(MbdiSpace.s)) {
+                        MbdiButton(
+                            "返回", { confirmReject = false },
+                            modifier = Modifier.weight(1f), style = BtnStyle.Secondary
+                        )
+                        MbdiButton(
+                            "确认退出",
+                            { android.os.Process.killProcess(android.os.Process.myPid()) },
+                            modifier = Modifier.weight(1f), style = BtnStyle.Danger
+                        )
+                    }
                 }
             }
-            }   // ← DialogScale 结束
         }
     }
 }
 
-/** 阅读进度环：环形进度 + 百分比数字（读满即 100%） */
+/** 小方框勾选（20dp，勾上后金色底 + 白勾） */
 @Composable
-private fun PrivacyProgressRing(progress: Float) {
+private fun CheckSquare(checked: Boolean, onClick: () -> Unit) {
     val t = AppStorage.currentMBDITheme()
-    val gold = colorFromHex(t.gold)
-    val track = colorFromHex(t.brd)
-    Box(Modifier.size(38.dp), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.fillMaxSize()) {
-            val sw = 3.dp.toPx()
-            val d = size.minDimension - sw
-            val tl = Offset((size.width - d) / 2f, (size.height - d) / 2f)
-            drawArc(
-                color = track, startAngle = 0f, sweepAngle = 360f,
-                useCenter = false, style = Stroke(sw), topLeft = tl, size = Size(d, d)
+    Box(
+        Modifier
+            .size(20.dp)
+            .clip(RoundedCornerShape(4.dp))
+            .background(if (checked) colorFromHex(t.gold) else Color.Transparent)
+            .border(
+                1.5.dp,
+                colorFromHex(if (checked) t.gold else t.text3),
+                RoundedCornerShape(4.dp)
             )
-            drawArc(
-                color = gold, startAngle = -90f, sweepAngle = 360f * progress.coerceIn(0f, 1f),
-                useCenter = false, style = Stroke(sw, cap = StrokeCap.Round), topLeft = tl, size = Size(d, d)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        if (checked) {
+            Icon(
+                Lucide.Check, contentDescription = "已同意",
+                modifier = Modifier.size(14.dp), tint = colorFromHex(t.bg)
             )
         }
-        Text(
-            "${(progress * 100).toInt()}",
-            fontSize = MbdiType.Caption, fontWeight = FontWeight.Bold, color = gold
-        )
     }
 }
 
