@@ -1,5 +1,7 @@
 package com.wqmtmbdi.mbcc.ui.profile
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -29,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -42,6 +45,7 @@ import com.wqmtmbdi.mbcc.mbdiCard
 import com.wqmtmbdi.mbcc.ui.components.MbdiChip
 import com.wqmtmbdi.mbcc.ui.components.MbdiPageTopBar
 import com.wqmtmbdi.mbcc.ui.components.SectionCard
+import com.wqmtmbdi.mbcc.ui.components.TipBus
 import com.wqmtmbdi.mbcc.ui.icons.Lucide
 import com.wqmtmbdi.mbcc.ui.theme.MbdiShape
 import com.wqmtmbdi.mbcc.ui.theme.MbdiSpace
@@ -59,6 +63,7 @@ import com.wqmtmbdi.mbcc.ui.theme.MbdiType
 @Composable
 fun AboutPage(onBack: () -> Unit, onOpenChangelog: () -> Unit) {
     val t = AppStorage.currentMBDITheme()
+    val context = LocalContext.current
 
     Column(Modifier.fillMaxSize()) {
         MbdiPageTopBar("关于", onBack)
@@ -132,7 +137,49 @@ fun AboutPage(onBack: () -> Unit, onOpenChangelog: () -> Unit) {
                     modifier = Modifier.size(16.dp), tint = colorFromHex(t.text3)
                 )
             }
+            Spacer(Modifier.height(MbdiSpace.s))
+
+            // ---- 源码仓库入口（AGPL-3.0 要求分发时能拿到源码）----
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .mbdiCard(shape = RoundedCornerShape(MbdiShape.card))
+                    .clickable {
+                        try {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(SOURCE_REPO_URL)))
+                        } catch (e: Exception) {
+                            TipBus.show("没有可用的浏览器")
+                        }
+                    }
+                    .padding(horizontal = MbdiSpace.l, vertical = 15.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Lucide.Link, contentDescription = null,
+                    modifier = Modifier.size(17.dp), tint = colorFromHex(t.gold)
+                )
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "项目源码", fontSize = MbdiType.Body, fontWeight = FontWeight.Bold,
+                        color = colorFromHex(t.text)
+                    )
+                    Text(
+                        SOURCE_REPO_URL.removePrefix("https://"),
+                        fontSize = MbdiType.Caption, color = colorFromHex(t.text3),
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+                Icon(
+                    Lucide.ChevronRight, contentDescription = null,
+                    modifier = Modifier.size(16.dp), tint = colorFromHex(t.text3)
+                )
+            }
+
             Spacer(Modifier.height(60.dp))
         }
     }
 }
+
+/** 源码仓库地址（改仓库时只改这里） */
+private const val SOURCE_REPO_URL = "https://github.com/jieyijiang2333/wuqi-MBDI"
